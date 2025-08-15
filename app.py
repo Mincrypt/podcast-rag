@@ -89,7 +89,7 @@ colA, colB = st.columns([1,1])
 with colA:
     topk = st.slider("Retrieve top‑k", 3, 12, 8, step=1, key="retrieve_k")
 with colB:
-    gen = st.toggle("Generate answer (uses LLM if configured)", value=True)
+    gen = st.toggle("Generate answer (uses LLM if configured)", value=False)
 
 if query:
     with st.spinner("Searching..."):
