@@ -1,58 +1,60 @@
 from typing import List, Dict, Any
 
 def chunk_by_time(
-    segments: List[Any],  # faster-whisper segments may be dicts or tuples of (Segment, ...)
+    segments: List[Any],
     window_s: float = 45.0,
     overlap_s: float = 7.0,
 ) -> List[Dict[str, Any]]:
     """
-    Split a list of faster-whisper segments into overlapping chunks.
-    Each seg may be a dict-like with keys or a tuple where seg[0] is the Segment object.
+    Build overlapping chunks from either dict-based segments or whisper Segment objects.
     """
-    # Normalize segments to objects with attributes if necessary
-    seg_objs = []
-    for seg in segments:
-        seg_obj = seg[0] if isinstance(seg, tuple) else seg
-        seg_objs.append(seg_obj)
-
-    # Build a unified list of word dicts with start/end info
     words = []
-    for seg in seg_objs:
-        if hasattr(seg, "words") and seg.words:
-            for w in seg.words:
-                words.append({"word": w.word, "start": w.start, "end": w.end})
+
+    for seg in segments:
+        # Dict-based segment (legacy)
+        if isinstance(seg, dict):
+            if seg.get("words"):
+                words.extend(seg["words"])
+            else:
+                words.append({
+                    "word": seg["text"],
+                    "start": seg["start"],
+                    "end": seg["end"],
+                })
+
+        # Whisper Segment object
+        elif hasattr(seg, "words") and hasattr(seg, "text") and hasattr(seg, "start") and hasattr(seg, "end"):
+            if seg.words:
+                for w in seg.words:
+                    words.append({"word": w.word, "start": w.start, "end": w.end})
+            else:
+                words.append({"word": seg.text, "start": seg.start, "end": seg.end})
+
+        # Anything else – skip
         else:
-            words.append({"word": seg.text, "start": seg.start, "end": seg.end})
+            continue
 
     if not words:
         return []
 
-    # Create overlapping time windows
+    tmin = words[0]["start"]
+    tmax = words[-1]["end"]
     chunks = []
-    start = words[0]["start"]
-    end = start + window_s
-    current_text = []
-    current_meta = {"start": start, "end": end}
+    cur_start = tmin
 
-    for w in words:
-        if w["start"] < end:
-            current_text.append(w["word"])
-        else:
+    while cur_start < tmax:
+        cur_end = cur_start + window_s
+        window_words = [
+            w for w in words
+            if w["start"] < cur_end and w["end"] > cur_start
+        ]
+        text = " ".join(w["word"] for w in window_words).strip()
+        if text:
             chunks.append({
-                "text": " ".join(current_text),
-                "start": current_meta["start"],
-                "end": current_meta["end"],
+                "text": text,
+                "start": max(cur_start, tmin),
+                "end": min(cur_end, tmax),
             })
-            start = end - overlap_s
-            end = start + window_s
-            current_meta = {"start": start, "end": end}
-            current_text = [w["word"]]
-
-    if current_text:
-        chunks.append({
-            "text": " ".join(current_text),
-            "start": current_meta["start"],
-            "end": current_meta["end"],
-        })
+        cur_start = cur_end - overlap_s
 
     return chunks
