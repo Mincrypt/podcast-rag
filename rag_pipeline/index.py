@@ -1,6 +1,9 @@
 import os
 from typing import List, Dict, Any
 import chromadb
+__import__('pysqlite3')
+import sys
+sys.modules['sqlite3'] = sys.modules.pop('pysqlite3')
 from chromadb.config import Settings
 from sentence_transformers import SentenceTransformer
 from dataclasses import dataclass
