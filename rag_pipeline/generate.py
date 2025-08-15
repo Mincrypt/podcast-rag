@@ -1,7 +1,16 @@
 import os
 from typing import List, Dict, Any
 
-TEMPLATE = "You are a helpful assistant answering questions about podcast episodes.\n" \           "Use the CONTEXT to answer the QUESTION. Cite timestamps and episode ids from the context.\n" \           "If the answer is not in context, say so and suggest the closest segments with timestamps.\n\n" \           "QUESTION:\n{question}\n\nCONTEXT:\n{context}\n"
+TEMPLATE = """You are a helpful assistant answering questions about podcast episodes.
+Use the provided context to answer the user's question accurately.
+If the information is not in the context, say so clearly.
+
+Context: {context}
+
+Question: {question}
+
+Answer:"""
+
 
 def format_context(hits: List[Dict[str, Any]]) -> str:
     lines = []
