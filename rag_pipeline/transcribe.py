@@ -1,47 +1,84 @@
-from faster_whisper import WhisperModel
-from typing import Dict, Any
-
-def transcribe_audio(
-    audio_path: str,
-    model_size: str = "base",
-    compute_type: str = "int8",
-    vad_filter: bool = True,
-    beam_size: int = 5,
-    word_timestamps: bool = True,
-) -> Dict[str, Any]:
-    """
-    Returns a dict:
-      {
-        "language": "en",
-        "segments": [ { "start": 0.0, "end": 2.3, "text": "...", "words": [ { "word": "hi", "start": 0.1, "end": 0.3}, ... ] }, ... ],
-        "duration": float,
-        "model_size": model_size
-      }
-    """
+def transcribe_audio(audio_path, model_size="base", compute_type="int8", vad_filter=True, beam_size=5):
     import time
+    from faster_whisper import WhisperModel
+    
     t0 = time.time()
     model = WhisperModel(model_size, compute_type=compute_type)
-    segments, info = model.transcribe(
-        audio_path,
-        vad_filter=vad_filter,
-        beam_size=beam_size,
-        word_timestamps=word_timestamps,
-        temperature=0.0,
-    )
-    out_segments = []
-    for seg in segments:
-        item = {
-            "start": float(seg.start),
-            "end": float(seg.end),
-            "text": seg.text.strip(),
+    
+    try:
+        segments, info = model.transcribe(
+            audio_path,
+            vad_filter=vad_filter,
+            beam_size=beam_size,
+        )
+        
+        # Convert segments to list to check if empty
+        segments_list = list(segments)
+        
+        if not segments_list:
+            # Return empty transcription if no segments found
+            return {
+                'language': 'unknown',
+                'duration': 0.0,
+                'segments': [],
+                'text': '',
+                'processing_time': time.time() - t0
+            }
+        
+        # Process segments normally
+        transcription_text = " ".join([segment.text for segment in segments_list])
+        
+        return {
+            'language': info.language,
+            'duration': info.duration,
+            'segments': segments_list,
+            'text': transcription_text,
+            'processing_time': time.time() - t0
         }
-        if seg.words:
-            item["words"] = [ {"word": w.word.strip(), "start": float(w.start), "end": float(w.end)} for w in seg.words ]
-        out_segments.append(item)
-    return {
-        "language": info.language,
-        "segments": out_segments,
-        "duration": float(info.duration),
-        "model_size": model_size,
-        "runtime_sec": time.time() - t0,
-    }
+        
+    except ValueError as e:
+        if "max() arg is an empty sequence" in str(e):
+            print(f"Language detection failed for {audio_path}. Retrying with explicit language.")
+            
+            try:
+                # Retry with explicit language and disabled VAD
+                segments, info = model.transcribe(
+                    audio_path,
+                    language="en",  # Force English
+                    vad_filter=False,  # Disable VAD filtering
+                    beam_size=beam_size,
+                )
+                
+                segments_list = list(segments)
+                transcription_text = " ".join([segment.text for segment in segments_list])
+                
+                return {
+                    'language': 'en',
+                    'duration': info.duration if hasattr(info, 'duration') else 0.0,
+                    'segments': segments_list,
+                    'text': transcription_text,
+                    'processing_time': time.time() - t0
+                }
+            except Exception as retry_error:
+                print(f"Retry also failed: {retry_error}")
+                # Return empty result as fallback
+                return {
+                    'language': 'unknown',
+                    'duration': 0.0,
+                    'segments': [],
+                    'text': '',
+                    'processing_time': time.time() - t0
+                }
+        else:
+            # Re-raise other ValueErrors
+            raise e
+    except Exception as e:
+        print(f"Unexpected error during transcription: {e}")
+        # Return empty result as fallback
+        return {
+            'language': 'unknown',
+            'duration': 0.0,
+            'segments': [],
+            'text': '',
+            'processing_time': time.time() - t0
+        }
