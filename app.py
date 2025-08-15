@@ -54,7 +54,7 @@ if st.button("Ingest & Index", type="primary") and files:
             st.write(f"Processing **{f.name}** (id: `{ep_id}`)")
 
             tr = transcribe_audio(path, model_size=model_size, vad_filter=False)
-            st.write(f"- Language: `{tr['language']}` | Duration: {tr['duration']:.1f}s | STT time: {tr['runtime_sec']:.1f}s")
+            st.write(f"- Language: `{tr['language']}` | Duration: {tr['duration']:.1f}s | Runtime: {tr['processing_time']:.1f}s")
 
             dia = diarize(path)
             if dia:
