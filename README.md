@@ -44,6 +44,10 @@ cd podcast-rag
 pip install -r requirements.txt
 streamlit run app.py
 ```
+## Quickstart (Server)
+```bash
+https://podcast-rag.streamlit.app/
+```
 
 Then open the Streamlit URL, upload a few `.mp3` files, click **Ingest & Index**, and start asking questions like:
 - "When did they discuss reinforcement learning?"
