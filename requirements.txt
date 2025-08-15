@@ -10,3 +10,6 @@ pandas==2.2.2
 pyannote.audio==3.1.1
 torch==2.3.1
 pysqlite3-binary
+groq==0.11.0
+openai==1.40.6
+tqdm==4.66.4
