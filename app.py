@@ -1,4 +1,7 @@
 import os, time
+__import__('pysqlite3')
+import sys
+sys.modules['sqlite3'] = sys.modules.pop('pysqlite3')
 import streamlit as st
 from typing import List, Dict, Any
 from rag_pipeline.transcribe import transcribe_audio
